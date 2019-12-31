@@ -1,0 +1,245 @@
+#!/bin/bash
+# Author: Alexis Ducastel <alexis@infrabuilder.com>
+
+#===[ Configuration ]==========================================================
+
+	ETCDIR="/etc/ibdfw"
+	CONFIGURATIONS="$ETCDIR/conf.d"
+	ALIASES="$ETCDIR/alias.d"
+
+	APPDIR="$SNAP"
+	MODULES="$APPDIR/modules"
+	PKGDIR="$APPDIR/packages" #TOREM
+
+	LASTRULES="$SNAP_COMMON/last.rules"
+	LASTDESC="$SNAP_COMMON/last.desc"
+
+	RULES="$SNAP_COMMON/ibdfw.rules"
+	DESC="$SNAP_COMMON/ibdfw.desc"
+
+	IPTABLES="/sbin/iptables"
+
+	LOGFILE="/var/log/ibdfw.log"
+
+#===[ Rules priority ]=========================================================
+
+	# Blacklist => Trust => Serving => Needing
+	# iptables is a lifo style rules list
+	# Last rule applies first => revert order
+	PRIO_PURGE="00"
+	PRIO_STD="02"
+	PRIO_PKINIT="03"
+	PRIO_NEEDING="04"
+	PRIO_PINGABLE="05"
+	PRIO_SERVING="06"
+	PRIO_TRUST="08"
+	PRIO_PKDONE="09"
+	PRIO_BLACKLIST="10"
+	PRIORITIES="$PRIO_PURGE $PRIO_STD $PRIO_PKINIT $PRIO_NEEDING $PRIO_PINGABLE $PRIO_SERVING $PRIO_TRUST $PRIO_PKDONE $PRIO_BLACKLIST"
+
+	# Aliases
+	PRIO_NAT="$PRIO_STD"
+
+#===[ Common functions ]=======================================================
+
+	# Print error and exit
+	function die { echo -e $* >&2 ; exit 1 ; }
+	function log { echo -e "$(date "+%Y-%m-%d %H:%M:%S") $@" | tee -a $LOGFILE; }
+
+#===[ Pre-flight checks ]======================================================
+
+[ "$(whoami)" != "root" ] && echo "Must be root to continue" >&2 && exit 1
+
+#===[ Utilities functions ]====================================================
+
+	# Iptables rules list
+	function fw-status { echo "Showing iptables rules :"; $IPTABLES -L -v --line-numbers; echo "Showing NAT :"; $IPTABLES -L -t nat -v --line-numbers; }
+
+	# Display explanation on running rules
+	function fw-explain { [ -e $LASTDESC ] && cat $LASTDESC || echo "Nothing to explain"; }
+
+	# Shut down all connections
+	function fw-panic {
+		# TODO
+		echo $*
+		echo "Dropping all connections now !"
+		#$IPTABLES -A INPUT -j DROP
+	}
+
+	# Display firewall usage
+	function usage { echo "$0 start|stop|restart|explain|status|init|test" ; }
+
+	# Count number of arguments
+	function fw-count { echo $#; }
+
+
+	# Add an iptable rule with a priority of $1
+	function fw-addRule {
+		echo ${*:2} >> $RULES.$1
+	}
+
+	# Add a description with priority of $1
+	function fw-addDescription {
+		echo ${*:2} >> $DESC.$1
+	}
+
+	# Compiling rules and executing
+	function fw-exec {
+		cat $DESC.* > $LASTDESC
+		cat $RULES.* | tee $LASTRULES | bash
+	}
+
+	# explode a string in $1 with separator defined in $2, extracting the $3th part
+	function fw-explode {
+		echo $1 |/usr/bin/awk "-F$2" '{print $'$3'}'
+	}
+
+	function fw-init {
+
+		mkdir -p "$CONFIGURATIONS"
+		cp "$APPDIR/conf.d/main.conf.sample" "$CONFIGURATIONS/"
+		mkdir -p "$ALIASES"
+		cp "$APPDIR/alias.d/main.alias.sample" "$ALIASES/"
+		cp "$APPDIR/manual.txt" "$ETCDIR/"
+	}
+
+#===[ Common functionnalities ]================================================
+
+	# Dropping rules and get back to default rules
+	function fw-purge {
+		for i in $PRIORITIES
+		do
+			[ -e $RULES.$i ] && rm $RULES.$i
+			[ -e $DESC.$i ] && rm $DESC.$i
+		done
+
+		# Changing default rules to ACCEPT
+		fw-addDescription $PRIO_PURGE [output][default]=ACCEPT
+		fw-addRule $PRIO_PURGE $IPTABLES -P OUTPUT ACCEPT
+		fw-addDescription $PRIO_PURGE [forward][default]=ACCEPT
+		fw-addRule $PRIO_PURGE $IPTABLES -P FORWARD ACCEPT
+		fw-addDescription $PRIO_PURGE [input][default]=ACCEPT
+		fw-addRule $PRIO_PURGE $IPTABLES -P INPUT ACCEPT
+
+		# Flushing FW
+		fw-addDescription $PRIO_PURGE flushing rules
+		fw-addRule $PRIO_PURGE $IPTABLES -F
+		fw-addDescription $PRIO_PURGE flushing custom tables
+		fw-addRule $PRIO_PURGE $IPTABLES -X
+		fw-addDescription $PRIO_PURGE flushing counters
+		fw-addRule $PRIO_PURGE $IPTABLES -Z
+
+		# Flushing NAT
+	        fw-addDescription $PRIO_PURGE flushing nat table
+	        fw-addRule $PRIO_PURGE $IPTABLES -t nat -F
+	        fw-addRule $PRIO_PURGE $IPTABLES -t nat -X
+	        fw-addRule $PRIO_PURGE $IPTABLES -t nat -Z
+
+		# Flushing Mangle
+	        fw-addDescription $PRIO_PURGE flushing mangle table
+	        fw-addRule $PRIO_PURGE $IPTABLES -t mangle -F
+	        fw-addRule $PRIO_PURGE $IPTABLES -t mangle -X
+	        fw-addRule $PRIO_PURGE $IPTABLES -t mangle -Z
+	}
+
+	# Applying standard common rules
+	function fw-std {
+		# Standard rules ( established + loopback )
+		fw-addDescription $PRIO_STD [input][established]=ACCEPT
+		fw-addRule $PRIO_STD $IPTABLES -I INPUT -j ACCEPT -m state --state ESTABLISHED,RELATED
+		fw-addDescription $PRIO_STD [input][loopback]=ACCEPT
+		fw-addRule $PRIO_STD $IPTABLES -I INPUT -j ACCEPT -i lo
+	}
+
+	# Applying configurations
+	function fw-fromconf {
+		# Chargement des configurations
+		for i in $(find "$CONFIGURATIONS"/*.conf)
+		do
+			source "$i"
+		done
+	}
+
+	# Port parsing
+	function fw-parsePort {
+
+		# port is a simple number
+		if [ "$(echo "$1" | tr -cd "[:digit:]")" = "$1" ]
+		then
+			echo "$1/tcp"
+			return 0
+		fi
+
+		# already formatted port declaration
+		echo $1 | grep -E "^[0-9]*/(tcp|udp|both)" > /dev/null
+		if [ "$?" = "0" ]
+		then
+			if [ "$( fw-explode $1 / 2 )" = "both" ]
+			then
+				p="$( fw-explode $1 / 1 )"
+				echo "$p/tcp $p/udp"
+			else
+				echo "$1"
+			fi
+			return 0
+		fi
+
+		# Searching in ALIASES
+		p=$([ -e "$ALIASES"/*.alias ] && grep "^$1\s" "$ALIASES"/*.alias | /usr/bin/awk '{print $2}' |paste "-sd " | /bin/sed -e 's/^ *//g' -e 's/ *$//g')
+		if [ "$p" != "" ]
+		then
+			echo $p
+			return 0
+		fi
+
+		# Searching in /etc/services
+		p=$([ -f /etc/services ] && grep "^$1\s" /etc/services | /usr/bin/awk '{print $2}' |paste "-sd " | /bin/sed -e 's/^ *//g' -e 's/ *$//g')
+		if [ "$p" != "" ]
+		then
+			echo $p
+			return 0
+		fi
+
+		die "Cannot find port for $1"
+	}
+
+	function fw-parsePortList {
+		ports=""
+		for i in $( echo $1 | /bin/sed 's/,/ /g')
+		do
+			ports="$ports $(fw-parsePort $i)"
+		done
+		echo "$ports"
+	}
+
+	function fw-test {
+		[ "$FWTESTTIME" = "" ] && FWTESTTIME="5"
+		log "ibdfw will automatically stop in $FWTESTTIME minutes, accepting all connections and stopping NAT ..."
+		echo "$0 stop" | at "now + $FWTESTTIME minutes"
+	}
+
+	function SetTestTimeInMinutes {
+		FWTESTTIME="$1"
+	}
+
+
+#===[ Configuration available function ]=======================================
+
+	# Chargement des modules
+	for i in $(find "$MODULES"/*)
+	do
+		source "$i"
+	done
+
+#===[ Main ]===================================================================
+
+case $1 in
+	start)	fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain;;
+	test)	fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain && fw-test;;
+	stop)	fw-purge && fw-exec;;
+	restart)fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain;;
+	explain)fw-explain ;;
+	status)	fw-status ;;
+	init)   fw-init ;;
+	*)	usage && exit 0 ;;
+esac

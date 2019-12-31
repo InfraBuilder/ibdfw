@@ -1,0 +1,4 @@
+#!/bin/bash
+
+/snap/bin/ibdfw init
+
