@@ -9,6 +9,7 @@
 
 	APPDIR="$SNAP"
 	MODULES="$APPDIR/modules"
+	MODULES_OVERRIDE="$ETCDIR/modules"
 	PKGDIR="$APPDIR/packages" #TOREM
 
 	LASTRULES="$SNAP_COMMON/last.rules"
@@ -52,112 +53,22 @@
 
 #===[ Utilities functions ]====================================================
 
-	# Iptables rules list
-	function fw-status { echo "Showing iptables rules :"; $IPTABLES -L -v --line-numbers; echo "Showing NAT :"; $IPTABLES -L -t nat -v --line-numbers; }
-
-	# Display explanation on running rules
-	function fw-explain { [ -e $LASTDESC ] && cat $LASTDESC || echo "Nothing to explain"; }
-
-	# Shut down all connections
-	function fw-panic {
-		# TODO
-		echo $*
-		echo "Dropping all connections now !"
-		#$IPTABLES -A INPUT -j DROP
-	}
-
-	# Display firewall usage
-	function usage { echo "$0 start|stop|restart|explain|status|init|test" ; }
-
 	# Count number of arguments
 	function fw-count { echo $#; }
-
-
-	# Add an iptable rule with a priority of $1
-	function fw-addRule {
-		echo ${*:2} >> $RULES.$1
-	}
-
-	# Add a description with priority of $1
-	function fw-addDescription {
-		echo ${*:2} >> $DESC.$1
-	}
-
-	# Compiling rules and executing
-	function fw-exec {
-		cat $DESC.* > $LASTDESC
-		cat $RULES.* | tee $LASTRULES | bash
-	}
 
 	# explode a string in $1 with separator defined in $2, extracting the $3th part
 	function fw-explode {
 		echo $1 |/usr/bin/awk "-F$2" '{print $'$3'}'
 	}
 
-	function fw-init {
-
-		mkdir -p "$CONFIGURATIONS"
-		cp "$APPDIR/conf.d/main.conf.sample" "$CONFIGURATIONS/"
-		mkdir -p "$ALIASES"
-		cp "$APPDIR/alias.d/main.alias.sample" "$ALIASES/"
-		cp "$APPDIR/manual.txt" "$ETCDIR/"
+	# Add an iptable rule with a priority of $1
+	function fw-addRule {
+		echo $IPTABLES ${*:2} >> $RULES.$1
 	}
 
-#===[ Common functionnalities ]================================================
-
-	# Dropping rules and get back to default rules
-	function fw-purge {
-		for i in $PRIORITIES
-		do
-			[ -e $RULES.$i ] && rm $RULES.$i
-			[ -e $DESC.$i ] && rm $DESC.$i
-		done
-
-		# Changing default rules to ACCEPT
-		fw-addDescription $PRIO_PURGE [output][default]=ACCEPT
-		fw-addRule $PRIO_PURGE $IPTABLES -P OUTPUT ACCEPT
-		fw-addDescription $PRIO_PURGE [forward][default]=ACCEPT
-		fw-addRule $PRIO_PURGE $IPTABLES -P FORWARD ACCEPT
-		fw-addDescription $PRIO_PURGE [input][default]=ACCEPT
-		fw-addRule $PRIO_PURGE $IPTABLES -P INPUT ACCEPT
-
-		# Flushing FW
-		fw-addDescription $PRIO_PURGE flushing rules
-		fw-addRule $PRIO_PURGE $IPTABLES -F
-		fw-addDescription $PRIO_PURGE flushing custom tables
-		fw-addRule $PRIO_PURGE $IPTABLES -X
-		fw-addDescription $PRIO_PURGE flushing counters
-		fw-addRule $PRIO_PURGE $IPTABLES -Z
-
-		# Flushing NAT
-	        fw-addDescription $PRIO_PURGE flushing nat table
-	        fw-addRule $PRIO_PURGE $IPTABLES -t nat -F
-	        fw-addRule $PRIO_PURGE $IPTABLES -t nat -X
-	        fw-addRule $PRIO_PURGE $IPTABLES -t nat -Z
-
-		# Flushing Mangle
-	        fw-addDescription $PRIO_PURGE flushing mangle table
-	        fw-addRule $PRIO_PURGE $IPTABLES -t mangle -F
-	        fw-addRule $PRIO_PURGE $IPTABLES -t mangle -X
-	        fw-addRule $PRIO_PURGE $IPTABLES -t mangle -Z
-	}
-
-	# Applying standard common rules
-	function fw-std {
-		# Standard rules ( established + loopback )
-		fw-addDescription $PRIO_STD [input][established]=ACCEPT
-		fw-addRule $PRIO_STD $IPTABLES -I INPUT -j ACCEPT -m state --state ESTABLISHED,RELATED
-		fw-addDescription $PRIO_STD [input][loopback]=ACCEPT
-		fw-addRule $PRIO_STD $IPTABLES -I INPUT -j ACCEPT -i lo
-	}
-
-	# Applying configurations
-	function fw-fromconf {
-		# Chargement des configurations
-		for i in $(find "$CONFIGURATIONS"/*.conf)
-		do
-			source "$i"
-		done
+	# Add a description with priority of $1
+	function fw-addDescription {
+		echo ${*:2} >> $DESC.$1
 	}
 
 	# Port parsing
@@ -185,7 +96,9 @@
 		fi
 
 		# Searching in ALIASES
-		p=$([ -e "$ALIASES"/*.alias ] && grep "^$1\s" "$ALIASES"/*.alias | /usr/bin/awk '{print $2}' |paste "-sd " | /bin/sed -e 's/^ *//g' -e 's/ *$//g')
+		FILES=""
+		[ -d "$ALIASES" ] && FILES=$(find "$ALIASES"/*)
+		p=$([ "$FILES" != "" ] && grep "^$1\s" "$ALIASES"/*.alias | /usr/bin/awk '{print $2}' |paste "-sd " | /bin/sed -e 's/^ *//g' -e 's/ *$//g')
 		if [ "$p" != "" ]
 		then
 			echo $p
@@ -212,6 +125,102 @@
 		echo "$ports"
 	}
 
+#===[ Actions functions ]======================================================
+
+	# Iptables rules list
+	function fw-status { echo "Showing iptables rules :"; $IPTABLES -L -n -v; }
+	function fw-export { $IPTABLES -S; $IPTABLES -S -t nat; }
+
+	# Display explanation on running rules
+	function fw-explain { [ -e $LASTDESC ] && cat $LASTDESC || echo "Nothing to explain"; }
+
+	# Shut down all connections
+	function fw-panic {
+		# TODO
+		echo $*
+		echo "Dropping all connections now !"
+		#$IPTABLES -A INPUT -j DROP
+	}
+
+	# Display firewall usage
+	function usage { echo "$0 start|stop|restart|explain|export|status|test" ; }
+
+	# Compiling rules and executing
+	function fw-exec {
+		cat $DESC.* > $LASTDESC
+		cat $RULES.* | tee $LASTRULES | bash
+	}
+
+	function fw-init {
+
+		mkdir -p "$CONFIGURATIONS"
+		cp "$APPDIR/conf.d/main.conf.sample" "$CONFIGURATIONS/"
+		mkdir -p "$ALIASES"
+		cp "$APPDIR/alias.d/main.alias.sample" "$ALIASES/"
+		cp "$APPDIR/manual.txt" "$ETCDIR/"
+	}
+
+	# Dropping rules and get back to default rules
+	function fw-purge {
+		for i in $PRIORITIES
+		do
+			[ -e $RULES.$i ] && rm $RULES.$i
+			[ -e $DESC.$i ] && rm $DESC.$i
+		done
+
+		# Changing default rules to ACCEPT
+		fw-addDescription $PRIO_PURGE [output][default]=ACCEPT
+		fw-addRule $PRIO_PURGE -P OUTPUT ACCEPT
+		fw-addDescription $PRIO_PURGE [forward][default]=ACCEPT
+		fw-addRule $PRIO_PURGE -P FORWARD ACCEPT
+		fw-addDescription $PRIO_PURGE [input][default]=ACCEPT
+		fw-addRule $PRIO_PURGE -P INPUT ACCEPT
+
+		# Flushing filter
+		fw-addDescription $PRIO_PURGE flushing rules
+		fw-addRule $PRIO_PURGE -F
+		fw-addDescription $PRIO_PURGE flushing custom tables
+		fw-addRule $PRIO_PURGE -X
+		fw-addDescription $PRIO_PURGE flushing counters
+		fw-addRule $PRIO_PURGE -Z
+
+		# Flushing NAT
+		fw-addDescription $PRIO_PURGE flushing nat table
+		fw-addRule $PRIO_PURGE -t nat -F
+		fw-addRule $PRIO_PURGE -t nat -X
+		fw-addRule $PRIO_PURGE -t nat -Z
+
+		# Flushing Mangle
+		fw-addDescription $PRIO_PURGE flushing mangle table
+		fw-addRule $PRIO_PURGE -t mangle -F
+		fw-addRule $PRIO_PURGE -t mangle -X
+		fw-addRule $PRIO_PURGE -t mangle -Z
+	}
+
+	# Applying standard common rules
+	function fw-std {
+		# Always authorize established
+		fw-addDescription $PRIO_STD [input][established]=ACCEPT
+		fw-addRule $PRIO_STD -I INPUT -j ACCEPT -m state --state ESTABLISHED,RELATED
+		fw-addDescription $PRIO_STD [forward][established]=ACCEPT
+		fw-addRule $PRIO_STD -I FORWARD -j ACCEPT -m state --state ESTABLISHED,RELATED
+		fw-addDescription $PRIO_STD [output][established]=ACCEPT
+		fw-addRule $PRIO_STD -I OUTPUT -j ACCEPT -m state --state ESTABLISHED,RELATED
+
+		# Always authorize loopback
+		fw-addDescription $PRIO_STD [input][loopback]=ACCEPT
+		fw-addRule $PRIO_STD -I INPUT -j ACCEPT -i lo
+	}
+
+	# Applying configurations
+	function fw-fromconf {
+		# Chargement des configurations
+		for i in $(find "$CONFIGURATIONS"/*.conf)
+		do
+			source "$i"
+		done
+	}
+
 	function fw-test {
 		[ "$FWTESTTIME" = "" ] && FWTESTTIME="5"
 		log "ibdfw will automatically stop in $FWTESTTIME minutes, accepting all connections and stopping NAT ..."
@@ -223,7 +232,7 @@
 	}
 
 
-#===[ Configuration available function ]=======================================
+#===[ Configuration available functions ]======================================
 
 	# Chargement des modules
 	for i in $(find "$MODULES"/*)
@@ -231,15 +240,23 @@
 		source "$i"
 	done
 
+	FILES=""
+	[ -d "$MODULES_OVERRIDE" ] && FILES=$(find "$MODULES_OVERRIDE"/*)
+	[ "$FILES" != ""  ] && for i in $(find "$MODULES_OVERRIDE"/*)
+	do
+		[ -r $i ] && source "$i"
+	done
+
 #===[ Main ]===================================================================
 
 case $1 in
-	start)	fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain;;
-	test)	fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain && fw-test;;
-	stop)	fw-purge && fw-exec;;
-	restart)fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain;;
-	explain)fw-explain ;;
-	status)	fw-status ;;
-	init)   fw-init ;;
+	start)	 fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ;;
+	test)	 fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain && fw-test ;;
+	stop)	 fw-purge && fw-exec ;;
+	restart) fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ;;
+	export)  fw-export ;;
+	explain) fw-explain ;;
+	status)	 fw-status ;;
+	init)    fw-init ;;
 	*)	usage && exit 0 ;;
 esac

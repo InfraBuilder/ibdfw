@@ -2,3 +2,4 @@ snap/.snapcraft/state
 parts
 prime
 stage
+*.snap

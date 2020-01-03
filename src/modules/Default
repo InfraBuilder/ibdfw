@@ -7,19 +7,24 @@
 #
 # examples :
 # 	Default input drop
+# 	Default forward drop
 # 	Default output accept
 #--------------------------------------------------------------------------
 function Default {
 	case $1 in
-		input) table=INPUT ;;
-		output) table=OUTPUT ;;
+		input) chain=INPUT ;;
+		output) chain=OUTPUT ;;
+		forward) chain=FORWARD ;;
+		*) die "Chain $1 is not a valid chain ($@)" ;;
 	esac
 
 	case $2 in
 		accept) action=ACCEPT ;;
+		reject) action=REJECT ;;
 		drop) action=DROP ;;
+		*) die "Action $1 is not a valid action ($@)" ;;
 	esac
 
 	fw-addDescription $PRIO_STD [$1][default]=$action
-	fw-addRule $PRIO_STD $IPTABLES -P $table $action
+	fw-addRule $PRIO_STD -P $chain $action
 }
