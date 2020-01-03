@@ -1,0 +1,37 @@
+#!/bin/bash
+#--------------------------------------------------------------------------
+# Output : Allow connections to local processes
+#
+# patterns :
+#	Output [<TO>] [<PORTS>]
+#		<TO> = [not-]to (ip|iprange|interface) <destination> 
+#		<PORTS> = [not-]ports (tcp|udp) <port[,port,...]>
+#
+# examples :
+#   Output port tcp 80,443
+#   Output to ip 10.0.0.0/8 port tcp 80,443
+#	Output not-to iprange 10.0.0.1-10.0.0.145 ports tcp 8080
+# 	Output to interface eth0 
+# 	Output to interface eth0 to iprange 10.30.40.22-10.30.40.25 port tcp 80:90
+#--------------------------------------------------------------------------
+function Output {
+	fw-addDescription $PRIO_FORWARD Output $@
+	rule="Output $@"
+	
+	filters=""
+	while [ "$(fw-isTargetFilter $1 $2 $3)" = "yes" ]
+	do
+		case "$1" in
+			from) die "filter '$1 $2 $3' is forbidden in rule '$rule' in file '$CONFIG_FILE'" ;;
+		esac 
+
+		newFilter="$(fw-targetFilter $1 $2 $3)"
+		[ "$?" = "0" ] || die "Error while parsing target filter '$@' for rule '$rule' in file '$CONFIG_FILE'" 
+		filters="$filters $newFilter"
+		shift;shift;shift
+	done
+
+	[ "$*" != "" ] && die "Cannot understand extra args $*"
+	
+	fw-addRule $PRIO_SERVING -I OUTPUT -j ACCEPT $filters
+}

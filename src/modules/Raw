@@ -1,0 +1,15 @@
+#!/bin/bash
+#--------------------------------------------------------------------------
+# Raw : give raw command to iptables
+#
+# patterns :
+#	Raw <command>
+#
+# examples :
+#	Raw -P INPUT ACCEPT
+#   Raw -A FORWARD ! -s 10.0.0.1/32 -d 192.168.1.254/32
+#--------------------------------------------------------------------------
+function Raw {
+	fw-addDescription $PRIO_STD Raw $@
+    fw-addRule $PRIO_STD $@
+}

@@ -1,0 +1,37 @@
+#!/bin/bash
+#--------------------------------------------------------------------------
+# Input : Allow connections to local processes
+#
+# patterns :
+#	Input [<FROM>] [<TO>] [<PORTS>]
+#		<FROM> = [not-]from (ip|iprange|interface) <source> 
+#		<TO> = [not-]to (ip|iprange) <destination> 
+#		<PORTS> = [not-]ports (tcp|udp) <port[,port,...]>
+#
+# examples :
+#   Input port tcp 80,443
+#   Input from ip 10.0.0.0/8 port tcp 80,443
+#	Input not-from iprange 10.0.0.1-10.0.0.145 ports tcp 8080
+# 	Input from interface eth0 
+# 	Input from interface eth0 to iprange 10.30.40.22-10.30.40.25 port tcp 80:90
+#--------------------------------------------------------------------------
+function Input {
+	fw-addDescription $PRIO_FORWARD Input $@
+	rule="Input $@"
+	
+	filters=""
+	while [ "$(fw-isTargetFilter $1 $2 $3)" = "yes" ]
+	do
+		case "$1 $2" in
+			"to interface") die "filter '$1 $2 $3' is forbidden in rule '$rule' in file '$CONFIG_FILE'" ;;
+		esac 
+		newFilter="$(fw-targetFilter $1 $2 $3)"
+		[ "$?" = "0" ] || die "Error while parsing target filter '$@' for rule '$rule' in file '$CONFIG_FILE'" 
+		filters="$filters $newFilter"
+		shift;shift;shift
+	done
+
+	[ "$*" != "" ] && die "Cannot understand extra args $*"
+	
+	fw-addRule $PRIO_SERVING -I INPUT -j ACCEPT $filters
+}

@@ -1,0 +1,33 @@
+#!/bin/bash
+#--------------------------------------------------------------------------
+# Forward : Allow connections to go through the routing process
+#
+# patterns :
+#	Forward [<FROM>] [<TO>] [<PORTS>]
+#		<FROM> = [not-]from (ip|iprange|interface) <source> 
+#		<TO> = [not-]to (ip|iprange|interface) <destination> 
+#		<PORTS> = [[not-]ports (tcp|udp) <port[,port,...]>]
+#
+# examples :
+#   Forward from ip 10.1.1.0/24 to ip 10.2.1.0/24
+#	Forward not-from iprange 10.0.0.1-10.0.0.145 ports tcp 8080
+# 	Forward from interface eth0 not-to interface eth1
+# 	Forward from interface eth0 to iprange 10.30.40.22-10.30.40.25 port tcp 80:90
+#--------------------------------------------------------------------------
+function Forward {
+	fw-addDescription $PRIO_FORWARD Forward $@
+	rule="Forward $@"
+	
+	filters=""
+	while [ "$(fw-isTargetFilter $1 $2 $3)" = "yes" ]
+	do
+		newFilter="$(fw-targetFilter $1 $2 $3)"
+		[ "$?" = "0" ] || die "Error while parsing target filter '$@'' for rule '$rule' in file '$CONFIG_FILE'" 
+		filters="$filters $newFilter"
+		shift;shift;shift
+	done
+
+	[ "$*" != "" ] && die "Cannot understand extra args $*"
+	
+	fw-addRule $PRIO_FORWARD -I FORWARD -j ACCEPT $filters
+}

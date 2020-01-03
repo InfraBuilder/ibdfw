@@ -3,28 +3,39 @@
 # Default : Defines default action for input/output
 #
 # patterns :
-# 	Default <input|output> <accept/drop/reject>
+# 	Default (input|output|forward)[,(input|output|forward)]* (accept/drop/reject)
 #
 # examples :
 # 	Default input drop
-# 	Default forward drop
+# 	Default forward,input reject
 # 	Default output accept
+# 	Default all accept
 #--------------------------------------------------------------------------
 function Default {
-	case $1 in
-		input) chain=INPUT ;;
-		output) chain=OUTPUT ;;
-		forward) chain=FORWARD ;;
-		*) die "Chain $1 is not a valid chain ($@)" ;;
-	esac
+	fw-addDescription $PRIO_DEFAULT Default $@
 
-	case $2 in
-		accept) action=ACCEPT ;;
-		reject) action=REJECT ;;
-		drop) action=DROP ;;
-		*) die "Action $1 is not a valid action ($@)" ;;
-	esac
+	chains=$1
+	[ "$chains" = "all" ] && chains="input,forward,output"
 
-	fw-addDescription $PRIO_STD [$1][default]=$action
-	fw-addRule $PRIO_STD -P $chain $action
+	# Iterating through chain list
+	for i in $(echo $chains|tr ',' ' ')
+	do
+		# Chain selector
+		case $i in
+			input) chain=INPUT ;;
+			output) chain=OUTPUT ;;
+			forward) chain=FORWARD ;;
+			*) die "Chain $1 is not a valid chain ($@)" ;;
+		esac
+		
+		# Action selector
+		case $2 in
+			accept) action=ACCEPT ;;
+			reject) action=REJECT ;;
+			drop) action=DROP ;;
+			*) die "Action $1 is not a valid action ($@)" ;;
+		esac
+		
+		fw-addRule $PRIO_DEFAULT -P $chain $action
+	done
 }
