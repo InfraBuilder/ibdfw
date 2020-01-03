@@ -278,7 +278,7 @@
 #===[ Main ]===================================================================
 
 case $1 in
-	auto) 	 $(fw-isEnabled) && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain;;
+	auto) 	 $(fw-isEnabled) && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ; exit 0;;
 	apply)	 fw-enable && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ;;
 	test)	 fw-test && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ;;
 	stop)	 fw-purge && fw-exec && fw-disable ;;
