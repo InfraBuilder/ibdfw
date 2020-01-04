@@ -3,9 +3,8 @@
 
 #===[ Configuration ]==========================================================
 
-	ETCDIR="$SNAP/etc/ibdfw"
+	ETCDIR="/etc/ibdfw"
 	CONFIGURATIONS="$ETCDIR/conf.d"
-	ALIASES="$ETCDIR/alias.d"
 
 	APPDIR="$SNAP"
 	MODULES="$APPDIR/modules"
@@ -177,7 +176,7 @@
 
 	function fw-init {
 		touch $ENABLE_FLAG
-		#mkdir -p "$CONFIGURATIONS"
+		mkdir -p "$CONFIGURATIONS"
 		#cp "$APPDIR/conf.d/main.conf.sample" "$CONFIGURATIONS/"
 	}
 
@@ -245,7 +244,7 @@
 		echo "ibdfw is an iptables based firewall rules manager"
 		echo "  configuration files are located in /etc/ibdfw/conf.d/"
 		echo "Commands :"
-		echo "	test <X> : Apply firewall configuration and automatically stop after <X> minutes"
+		#echo "	test <X> : Apply firewall configuration and automatically stop after <X> minutes"
 		echo "	apply    : Apply firewall configuration and enable firewall"
 		echo "	auto     : Apply firewall configuration only if previously enabled"
 		echo "	stop     : Stop firewall configuration (filtering AND nat)"
@@ -281,7 +280,7 @@
 case $1 in
 	auto) 	 $(fw-isEnabled) && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ; exit 0;;
 	apply)	 fw-enable && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ;;
-	test)	 fw-test && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ;;
+	#test)	 fw-test $2 && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ;;
 	stop)	 fw-purge && fw-exec && fw-disable ;;
 	export)  fw-purge && fw-std && fw-fromconf && fw-export ;;
 	explain) fw-explain ;;

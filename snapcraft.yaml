@@ -1,5 +1,5 @@
 name: ibdfw
-version: '0.0.89'
+version: '0.1.1'
 summary: Iptables based firewall rules manager
 description: |
   ibdfw is an iptables rules manager with advanced features
@@ -7,12 +7,7 @@ description: |
 base: core18
 
 grade: devel
-confinement: strict
-
-passthrough:
-  layout:
-    /etc/ibdfw/conf.d:
-      bind: $SNAP/etc/ibdfw/conf.d
+confinement: classic
 
 apps:
   ibdfw:
@@ -31,6 +26,5 @@ parts:
 #    stage-packages:
 #    - iptables
 #    - gawk
-#    - coreutils
 #    - sed
 #    - grep
