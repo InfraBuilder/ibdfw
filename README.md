@@ -25,13 +25,13 @@ Could not use iptables. Please run:
   'sudo snap connect ibdfw:firewall-control'
 ```
 
-## Configuration
+## Configuration
 
 Configuration is made by all files finishing with ".conf" that are in `/var/snap/ibdfw/common/conf.d/`
 
 You can generate a config sample with the command `ibdfw config` also available here : [src/conf.d/main.conf.sample](src/conf.d/main.conf.sample)
 
-## Features
+## Features
 
 - Easy NAT configuration for unidirectionnal (snat), bidirectionnal (1:1) and port-forward NAT
 
