@@ -3,7 +3,7 @@
 
 #===[ Configuration ]==========================================================
 
-	ETCDIR="/etc/ibdfw"
+	ETCDIR="$SNAP/etc/ibdfw"
 	CONFIGURATIONS="$ETCDIR/conf.d"
 	ALIASES="$ETCDIR/alias.d"
 
@@ -75,11 +75,6 @@
 	# Add a description with priority of $1
 	function fw-addDescription {
 		echo ${*:2} >> $DESC.$1
-	}
-
-	# TODO
-	function fw-getIpSet {
-		echo "127.0.0.23"
 	}
 
 	function fw-isTargetFilter {
@@ -182,9 +177,8 @@
 
 	function fw-init {
 		touch $ENABLE_FLAG
-		mkdir -p "$CONFIGURATIONS"
-		cp "$APPDIR/conf.d/main.conf.sample" "$CONFIGURATIONS/"
-		cp "$APPDIR/manual.txt" "$ETCDIR/"
+		#mkdir -p "$CONFIGURATIONS"
+		#cp "$APPDIR/conf.d/main.conf.sample" "$CONFIGURATIONS/"
 	}
 
 	# Dropping rules and get back to default rules
@@ -249,6 +243,7 @@
 	# Display firewall usage
 	function usage { 
 		echo "ibdfw is an iptables based firewall rules manager"
+		echo "  configuration files are located in /etc/ibdfw/conf.d/"
 		echo "Commands :"
 		echo "	test <X> : Apply firewall configuration and automatically stop after <X> minutes"
 		echo "	apply    : Apply firewall configuration and enable firewall"
@@ -257,7 +252,13 @@
 		echo "	explain  : Display human readable configuration rules that would be applied"
 		echo "	export   : Display iptables commands that would be applied"
 		echo "	status   : Is firewall enabled or not"
+		echo "	config   : Display a configuration file sample"
 		exit
+	}
+
+	# Display some config sample
+	function fw-config {
+		cat "$APPDIR/conf.d/main.conf.sample" 
 	}
 
 #===[ Configuration available functions ]======================================
@@ -286,5 +287,6 @@ case $1 in
 	explain) fw-explain ;;
 	status)	 fw-status ;;
 	init)    fw-init ;;
+	config)  fw-config ;;
 	*)	usage && exit 0 ;;
 esac

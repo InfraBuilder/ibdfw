@@ -1,5 +1,5 @@
 name: ibdfw
-version: '0.0.16'
+version: '0.0.89'
 summary: Iptables based firewall rules manager
 description: |
   ibdfw is an iptables rules manager with advanced features
@@ -7,24 +7,30 @@ description: |
 base: core18
 
 grade: devel
-confinement: classic
+confinement: strict
+
+passthrough:
+  layout:
+    /etc/ibdfw/conf.d:
+      bind: $SNAP/etc/ibdfw/conf.d
 
 apps:
   ibdfw:
     command: ibdfw
-  ibdfw-daemon-start:
-    command: ibdfw start
-    stop-command: ibdfw stop
+  daemon:
+    command: ibdfw auto
     daemon: oneshot
 
 parts:
   ibdfw:
     source: src/
     plugin: dump
-
-
-#    organize:
-#      '*.png' : images/
-#      launch.wrapper: usr/bin/launcher
-#    prime:
-#      - -README*
+#  network-utils:
+#    plugin: nil
+#    override-pull: ""
+#    stage-packages:
+#    - iptables
+#    - gawk
+#    - coreutils
+#    - sed
+#    - grep
