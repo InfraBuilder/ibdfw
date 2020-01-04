@@ -302,8 +302,8 @@ case $1 in
 	apply)	 fw-assertRights && fw-enable && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ;;
 	#test)	 fw-assertRights && fw-test $2 && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ;;
 	stop)	 fw-assertRights && fw-purge && fw-exec && fw-disable ;;
-	export)  fw-purge && fw-std && fw-fromconf && fw-export ;;
-	explain) fw-purge && fw-std && fw-fromconf && fw-explain ;;
+	export)  fw-assertRights && fw-purge && fw-std && fw-fromconf && fw-export ;;
+	explain) fw-assertRights && fw-purge && fw-std && fw-fromconf && fw-explain ;;
 	init)	 fw-init ;;
 	status)	 fw-status ;;
 	config)  fw-config ;;

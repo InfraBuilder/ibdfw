@@ -3,36 +3,52 @@
 # Nat : provide internet access to private network
 #
 # patterns :
-#       Nat unidirectionnal <ip/network> via <ip>
-#		Nat forward <outside-ip>:<port> to <inside-ip>:<port>
+#	Nat unidirectionnal <ip/network> via <outside-ip> [except <ip/network>[,<ip/network>][,...]]
+#	Nat bidirectionnal <inside-ip> via <outside-ip> [except <ip/network>[,<ip/network>][,...]]
+#	Nat forward <outside-ip>:<port> to <inside-ip>:<port>
 #
 # examples :
-#       Nat unidirectionnal 10.0.0.0/8 via 5.6.7.8
-# 		Nat bidirectionnal 10.0.0.1 via 4.4.4.4
-#		Nat port-forward 5.6.7.8:1022 to 10.0.0.1:22
+#	Nat unidirectionnal 10.0.0.0/8 via 5.6.7.8
+#	Nat unidirectionnal 10.0.0.0/8 via 5.6.7.8 except 192.168.0.0/16,172.16.0.0/12
+# 	Nat bidirectionnal 10.0.0.1 via 4.4.4.4
+# 	Nat bidirectionnal 10.0.0.1 via 4.4.4.4 except 192.168.1.45
+#	Nat port-forward 5.6.7.8:1022 to 10.0.0.1:22
 #--------------------------------------------------------------------------
 
 function Nat {
 	fw-addDescription $PRIO_NAT Nat $@
 
 	case $1 in
-       	unidirectionnal)
+		unidirectionnal)
 			inside="$2"
 			outside="$4"
-			fw-addRule $PRIO_NAT -t nat -A POSTROUTING -j SNAT -s "$inside" '!' -d "$inside"  --to "$outside"
+			fw-addRule $PRIO_NAT -t nat -I POSTROUTING -j SNAT -s "$inside" '!' -d "$inside"  --to "$outside"
+
+			if [ "$5" = "except" ]
+			then
+				fw-addRule $PRIO_NAT -t nat -I POSTROUTING -j ACCEPT -s "$inside" -d "$6"
+			fi
 			;;
+
 		bidirectionnal)
 			inside="$2"
 			outside="$4"
-			fw-addRule $PRIO_NAT -t nat -A POSTROUTING -j SNAT -s "$inside" --to "$outside"
-			fw-addRule $PRIO_NAT -t nat -A PREROUTING -j DNAT -d "$outside" --to "$inside"
+			fw-addRule $PRIO_DEFAULT -t nat -I POSTROUTING -j SNAT -s "$inside" --to "$outside"
+			fw-addRule $PRIO_DEFAULT -t nat -I PREROUTING -j DNAT -d "$outside" --to "$inside"
+
+			if [ "$5" = "except" ]
+			then
+				fw-addRule $PRIO_DEFAULT -t nat -I POSTROUTING -j ACCEPT -s "$inside" -d "$6"
+			fi
 			;;
+
 		port-forward)
 			ip=$(echo $2 | sed 's/:.*//g')
 			port=$(echo $2 | sed 's/.*://g')
 			dest="$4"
-			fw-addRule $PRIO_NAT -t nat -A PREROUTING -p tcp -d $ip --dport $port -j DNAT --to-destination $dest
+			fw-addRule $PRIO_DEFAULT -t nat -I PREROUTING -p tcp -d $ip --dport $port -j DNAT --to-destination $dest
 			;;
+
 		*)
 			die "Unknown pattern Nat $*"
 			;;
