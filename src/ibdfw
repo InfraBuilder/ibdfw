@@ -1,14 +1,18 @@
 #!/bin/bash
 # Author: Alexis Ducastel <alexis@infrabuilder.com>
 
+if [ -z "$SNAP" ]; then
+    echo "SNAP not set"
+    exit 1
+fi
+
 #===[ Configuration ]==========================================================
 
-	ETCDIR="/etc/ibdfw"
-	CONFIGURATIONS="$ETCDIR/conf.d"
+	CONFIG_DIR="$SNAP_COMMON/conf.d"
 
 	APPDIR="$SNAP"
 	MODULES="$APPDIR/modules"
-	MODULES_OVERRIDE="$ETCDIR/modules"
+	MODULES_OVERRIDE="$SNAP_COMMON/modules"
 	PKGDIR="$APPDIR/packages" #TOREM
 
 	LASTRULES="$SNAP_COMMON/last.rules"
@@ -19,7 +23,7 @@
 
 	ENABLE_FLAG="$SNAP_COMMON/enabled"
 
-	IPTABLES="/sbin/iptables"
+	IPTABLES="$SNAP/sbin/iptables"
 
 	LOGFILE="/var/log/ibdfw.log"
 
@@ -51,10 +55,6 @@
 	# Print error and exit
 	function die { echo -e $* >&2 ; exit 1 ; }
 	function log { echo -e "$(date "+%Y-%m-%d %H:%M:%S") $@" | tee -a $LOGFILE; }
-
-#===[ Pre-flight checks ]======================================================
-
-[ "$EUID" != "0" ] && echo "Must be root to continue" >&2 && exit 1
 
 #===[ Utilities functions ]====================================================
 
@@ -160,7 +160,7 @@
 #===[ Actions functions ]======================================================
 
 	# Iptables rules list
-	function fw-status { $(fw-isEnabled) && echo "Firewall started" || echo "Firewall stopped" ; $(fw-isEnabled); }
+	function fw-status { fw-isEnabled && echo "Firewall started" || echo "Firewall stopped" ; $(fw-isEnabled); }
 
 	# Export generated iptables rules
 	function fw-export { cat $RULES.* ; }
@@ -172,12 +172,6 @@
 	function fw-exec {
 		cat $DESC.* > $LASTDESC
 		cat $RULES.* | tee $LASTRULES | bash
-	}
-
-	function fw-init {
-		touch $ENABLE_FLAG
-		mkdir -p "$CONFIGURATIONS"
-		#cp "$APPDIR/conf.d/main.conf.sample" "$CONFIGURATIONS/"
 	}
 
 	# Dropping rules and get back to default rules
@@ -222,9 +216,9 @@
 
 	# Applying configurations
 	function fw-fromconf {
-		for i in $(ls -1 "$CONFIGURATIONS/" |grep -E '.conf$')
+		for i in $(ls -1 "$CONFIG_DIR/" |grep -E '.conf$')
 		do
-			CONFIG_FILE="$CONFIGURATIONS/$i"
+			CONFIG_FILE="$CONFIG_DIR/$i"
 			source $CONFIG_FILE
 		done
 	}
@@ -233,16 +227,36 @@
 	function fw-enable { echo "1" > $ENABLE_FLAG; }
 	function fw-isEnabled { [ "$(cat $ENABLE_FLAG)" = "1" ]; }
 
-	function fw-test {
-		[ "$1" = "" ] && die "Usage : ibdfw test <minutes>"
-		log "ibdfw will automatically stop in $1 minutes, accepting all connections and stopping NAT ..."
-		echo "$0 stop" | at "now + $1 minutes"
+	function fw-assertRights {
+		
+		if [ $EUID -gt 0 ]
+		then
+			die "ERROR: You need to be root to run this script"
+		fi
+
+		$IPTABLES -L >/dev/null 2>&1
+		if [ $? -gt 0 ]
+		then
+			echo "Could not use iptables. Please run:"
+			echo "  'sudo snap connect ibdfw:firewall-control'"
+			exit 1
+		fi
+	}
+
+	#function fw-test {
+	#	[ "$1" = "" ] && die "Usage : ibdfw test <minutes>"
+	#	log "ibdfw will automatically stop in $1 minutes, accepting all connections and stopping NAT ..."
+	#	echo "$0 stop" | at "now + $1 minutes"
+	#}
+
+	function fw-version { 
+		echo $SNAP_VERSION
 	}
 
 	# Display firewall usage
 	function usage { 
 		echo "ibdfw is an iptables based firewall rules manager"
-		echo "  configuration files are located in /etc/ibdfw/conf.d/"
+		echo "  configuration files are located in $CONFIG_DIR/"
 		echo "Commands :"
 		#echo "	test <X> : Apply firewall configuration and automatically stop after <X> minutes"
 		echo "	apply    : Apply firewall configuration and enable firewall"
@@ -252,12 +266,18 @@
 		echo "	export   : Display iptables commands that would be applied"
 		echo "	status   : Is firewall enabled or not"
 		echo "	config   : Display a configuration file sample"
+		echo "	version  : Display current version"
 		exit
 	}
 
 	# Display some config sample
 	function fw-config {
 		cat "$APPDIR/conf.d/main.conf.sample" 
+	}
+
+	function fw-init {
+		mkdir -p $CONFIG_DIR
+		touch $ENABLE_FLAG
 	}
 
 #===[ Configuration available functions ]======================================
@@ -278,14 +298,15 @@
 #===[ Main ]===================================================================
 
 case $1 in
-	auto) 	 $(fw-isEnabled) && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ; exit 0;;
-	apply)	 fw-enable && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ;;
-	#test)	 fw-test $2 && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ;;
-	stop)	 fw-purge && fw-exec && fw-disable ;;
+	auto) 	 fw-isEnabled && fw-assertRights && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ; exit 0;;
+	apply)	 fw-assertRights && fw-enable && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ;;
+	#test)	 fw-assertRights && fw-test $2 && fw-purge && fw-std && fw-fromconf && fw-exec && fw-explain ;;
+	stop)	 fw-assertRights && fw-purge && fw-exec && fw-disable ;;
 	export)  fw-purge && fw-std && fw-fromconf && fw-export ;;
-	explain) fw-explain ;;
+	explain) fw-purge && fw-std && fw-fromconf && fw-explain ;;
+	init)	 fw-init ;;
 	status)	 fw-status ;;
-	init)    fw-init ;;
 	config)  fw-config ;;
+	version) fw-version ;;
 	*)	usage && exit 0 ;;
 esac
