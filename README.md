@@ -1,7 +1,7 @@
 # ibdfw
 infraBuilder firewall
 
-[![ibdfw](https://snapcraft.io//ibdfw/badge.svg)](https://snapcraft.io/ibdfw) ![Twitter Follow](https://img.shields.io/twitter/follow/infrabuilder?style=social)
+[![ibdfw](https://snapcraft.io//ibdfw/badge.svg)](https://snapcraft.io/ibdfw) [![Twitter Follow](https://img.shields.io/twitter/follow/infrabuilder?style=social)](https://twitter.com/infrabuilder)
 
 ## how to install ibdfw
 
@@ -18,7 +18,7 @@ You can generate your first config file with :
 ibdfw config | sudo tee /var/snap/ibdfw/common/conf.d/main.conf
 ```
 
-When applying rules for the first time, you must have to connect firewall-control interface to ibdfw snap (error will be explicit, and will display the fixing command) : 
+When applying rules for the first time, you have to connect firewall-control interface to ibdfw snap (error will be explicit, and will display the fixing command) :
 ```bash
 ubuntu@fw:~$ sudo ibdfw apply
 Could not use iptables. Please run:
@@ -33,7 +33,7 @@ You can generate a config sample with the command `ibdfw config` also available 
 
 ## Features
 
-- Easy NAT configuration for unidirectionnal (snat), bidirectionnal (1:1) and port-forward NAT
+- Easy NAT configuration for unidirectionnal (snat), bidirectionnal (1:1), port-forward NAT and NAT  reflection
 
 - Comprehensive syntax for configuration
 
@@ -46,6 +46,7 @@ You can generate a config sample with the command `ibdfw config` also available 
   Input from ip 10.1.1.0/24 port tcp 8080
   Nat unidirectionnal 10.0.0.0/8 via 5.6.7.8
   Nat port-forward 5.6.7.8:1022 to 10.0.0.1:22
+  Nat reflection 10.0.0.0/8 on eth1
   ```
 
 - ibdfw is written in bash and is based on iptables
