@@ -275,6 +275,13 @@ fi
 		cat "$APPDIR/conf.d/main.conf.sample" 
 	}
 
+	# Display some config sample
+	function fw-edit {
+		MAINCONF="$APPDIR/conf.d/main.conf" 
+		[ -e "$MAINCONF" ] || fw-config > "$MAINCONF"
+		$EDITOR "$MAINCONF" 
+	}
+
 	function fw-init {
 		mkdir -p $CONFIG_DIR
 		touch $ENABLE_FLAG
@@ -307,6 +314,7 @@ case $1 in
 	init)	 fw-init ;;
 	status)	 fw-status ;;
 	config)  fw-config ;;
+	edit)    fw-edit ;;
 	version) fw-version ;;
 	*)	usage && exit 0 ;;
 esac

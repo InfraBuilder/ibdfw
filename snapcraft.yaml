@@ -1,10 +1,10 @@
 name: ibdfw
-version: '0.2.3'
+version: '0.2.4'
 summary: Iptables based firewall rules manager
 description: |
   ibdfw is an iptables rules manager with advanced features
 
-base: core18
+base: core20
 
 grade: stable
 confinement: strict
