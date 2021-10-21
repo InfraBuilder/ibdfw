@@ -277,7 +277,7 @@ fi
 
 	# Display some config sample
 	function fw-edit {
-		MAINCONF="$APPDIR/conf.d/main.conf" 
+		MAINCONF="$CONFIG_DIR/main.conf" 
 		[ -e "$MAINCONF" ] || fw-config > "$MAINCONF"
 		$EDITOR "$MAINCONF" 
 	}
