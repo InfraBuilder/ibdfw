@@ -279,7 +279,7 @@ fi
 	function fw-edit {
 		MAINCONF="$CONFIG_DIR/main.conf" 
 		[ -e "$MAINCONF" ] || fw-config > "$MAINCONF"
-		$EDITOR "$MAINCONF" 
+		exec $EDITOR "$MAINCONF" 
 	}
 
 	function fw-init {
