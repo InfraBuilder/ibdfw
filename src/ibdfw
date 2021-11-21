@@ -23,7 +23,7 @@ fi
 
 	ENABLE_FLAG="$SNAP_COMMON/enabled"
 
-	IPTABLES="$SNAP/sbin/iptables"
+	IPTABLES="$SNAP/usr/sbin/iptables"
 
 	LOGFILE="/var/log/ibdfw.log"
 
