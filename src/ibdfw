@@ -275,12 +275,17 @@ fi
 		cat "$APPDIR/conf.d/main.conf.sample" 
 	}
 
-	# Display some config sample
+	# Edit config
 	function fw-edit {
 		MAINCONF="$CONFIG_DIR/main.conf" 
 		[ -e "$MAINCONF" ] || fw-config > "$MAINCONF"
 		[ "$EDITOR" = "" ] && EDITOR=vim
 		exec $EDITOR "$MAINCONF" 
+	}
+
+	# 
+	function fw-iptables {
+		$IPTABLES $@
 	}
 
 	function fw-init {
@@ -316,6 +321,7 @@ case $1 in
 	status)	 fw-status ;;
 	config)  fw-config ;;
 	edit)    fw-edit ;;
+	iptables)    fw-iptables $@;;
 	version) fw-version ;;
 	*)	usage && exit 0 ;;
 esac
