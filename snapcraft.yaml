@@ -29,5 +29,4 @@ parts:
     - iptables
     - nano
     - vim
-    - vi 
     - emacs
