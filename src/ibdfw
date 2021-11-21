@@ -279,8 +279,7 @@ fi
 	function fw-edit {
 		MAINCONF="$CONFIG_DIR/main.conf" 
 		[ -e "$MAINCONF" ] || fw-config > "$MAINCONF"
-		[ "$EDITOR" = "" ] && EDITOR=vim
-		exec $EDITOR "$MAINCONF" 
+		vim "$MAINCONF"
 	}
 
 	# 
