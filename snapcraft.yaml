@@ -27,6 +27,3 @@ parts:
     - conntrack
     - ipset
     - iptables
-    - nano
-    - vim
-    - emacs

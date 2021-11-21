@@ -237,7 +237,7 @@ fi
 		$IPTABLES -L >/dev/null 2>&1
 		if [ $? -gt 0 ]
 		then
-			echo "Could not use iptables. Please run:"
+			echo "Could not use iptables ($IPTABLES). Please run:"
 			echo "  'sudo snap connect ibdfw:firewall-control'"
 			exit 1
 		fi
@@ -279,6 +279,7 @@ fi
 	function fw-edit {
 		MAINCONF="$CONFIG_DIR/main.conf" 
 		[ -e "$MAINCONF" ] || fw-config > "$MAINCONF"
+		[ "$EDITOR" = "" ] && EDITOR=vim
 		exec $EDITOR "$MAINCONF" 
 	}
 
