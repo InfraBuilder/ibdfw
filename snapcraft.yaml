@@ -28,4 +28,3 @@ parts:
     - ipset
     - iptables
     - vim
-    - nano
