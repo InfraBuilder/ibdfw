@@ -24,7 +24,7 @@ fi
 	ENABLE_FLAG="$SNAP_COMMON/enabled"
 
 	IPTABLES="iptables"
-	EDITOR="vim.basic"
+	EDITOR="nano"
 
 	LOGFILE="/var/log/ibdfw.log"
 
@@ -323,6 +323,6 @@ case $1 in
 	edit)    fw-edit ;;
 	iptables)    fw-iptables $@;;
 	version) fw-version ;;
-	debug) exec $@ ;; 
+	debug) shift; exec $@ ;; 
 	*)	usage && exit 0 ;;
 esac
