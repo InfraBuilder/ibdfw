@@ -1,5 +1,5 @@
 name: ibdfw
-version: '0.3.3'
+version: '0.3.4'
 summary: Iptables based firewall rules manager
 description: |
   ibdfw is an iptables rules manager with advanced features

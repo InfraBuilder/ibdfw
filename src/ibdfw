@@ -281,7 +281,7 @@ fi
 	# Edit config
 	function fw-edit {
 		CONFIGFILE="$CONFIG_DIR/${1:-main.conf}" 
-		[ -e "$CONFIGFILE" ] || fw-config > "$CONFIGFILE"
+		[ -e "$CONFIGFILE" ] || fw-sample > "$CONFIGFILE"
 		$EDITOR "$CONFIGFILE"
 	}
 
