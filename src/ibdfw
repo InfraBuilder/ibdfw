@@ -278,9 +278,9 @@ fi
 
 	# Edit config
 	function fw-edit {
-		MAINCONF="$CONFIG_DIR/main.conf" 
-		[ -e "$MAINCONF" ] || fw-config > "$MAINCONF"
-		$EDITOR "$MAINCONF"
+		CONFIGFILE="$CONFIG_DIR/${1:-main.conf}" 
+		[ -e "$CONFIGFILE" ] || fw-config > "$CONFIGFILE"
+		$EDITOR "$CONFIGFILE"
 	}
 
 	# 
@@ -320,7 +320,7 @@ case $1 in
 	init)	 fw-init ;;
 	status)	 fw-status ;;
 	config)  fw-config ;;
-	edit)    fw-edit ;;
+	edit)    fw-edit $@	;;
 	iptables)  shift; fw-iptables $@;;
 	version) fw-version ;;
 	debug) shift; exec $@ ;; 
