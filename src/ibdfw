@@ -321,7 +321,7 @@ case $1 in
 	status)	 fw-status ;;
 	config)  fw-config ;;
 	edit)    fw-edit ;;
-	iptables)    fw-iptables $@;;
+	iptables)  shift; fw-iptables $@;;
 	version) fw-version ;;
 	debug) shift; exec $@ ;; 
 	*)	usage && exit 0 ;;
