@@ -24,6 +24,7 @@ fi
 	ENABLE_FLAG="$SNAP_COMMON/enabled"
 
 	IPTABLES="iptables"
+	EDITOR="vim.basic"
 
 	LOGFILE="/var/log/ibdfw.log"
 
@@ -279,7 +280,7 @@ fi
 	function fw-edit {
 		MAINCONF="$CONFIG_DIR/main.conf" 
 		[ -e "$MAINCONF" ] || fw-config > "$MAINCONF"
-		vim "$MAINCONF"
+		$EDITOR "$MAINCONF"
 	}
 
 	# 
@@ -322,5 +323,6 @@ case $1 in
 	edit)    fw-edit ;;
 	iptables)    fw-iptables $@;;
 	version) fw-version ;;
+	debug) exec $@ ;; 
 	*)	usage && exit 0 ;;
 esac
