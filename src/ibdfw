@@ -322,7 +322,7 @@ case $1 in
 	init)	 fw-init ;;
 	status)	 fw-status ;;
 	sample)  fw-sample ;;
-	edit)    fw-edit $@	;;
+	edit)    shift; fw-edit $1	;;
 	iptables)  shift; fw-iptables $@;;
 	version) fw-version ;;
 	debug) shift; exec $@ ;; 
