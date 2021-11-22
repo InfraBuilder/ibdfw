@@ -266,13 +266,15 @@ fi
 		echo "	explain  : Display human readable configuration rules that would be applied"
 		echo "	export   : Display iptables commands that would be applied"
 		echo "	status   : Is firewall enabled or not"
-		echo "	config   : Display a configuration file sample"
+		echo "	sample   : Display a configuration file sample"
+		echo "	edit     : Edit a configuration file created if not exists (default: main.conf)"
+		echo "	iptables : Directly call iptables binary"
 		echo "	version  : Display current version"
 		exit
 	}
 
 	# Display some config sample
-	function fw-config {
+	function fw-sample {
 		cat "$APPDIR/conf.d/main.conf.sample" 
 	}
 
@@ -319,7 +321,7 @@ case $1 in
 	explain) fw-assertRights && fw-purge && fw-std && fw-fromconf && fw-explain ;;
 	init)	 fw-init ;;
 	status)	 fw-status ;;
-	config)  fw-config ;;
+	sample)  fw-sample ;;
 	edit)    fw-edit $@	;;
 	iptables)  shift; fw-iptables $@;;
 	version) fw-version ;;
