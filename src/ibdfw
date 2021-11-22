@@ -24,7 +24,7 @@ fi
 	ENABLE_FLAG="$SNAP_COMMON/enabled"
 
 	IPTABLES="iptables"
-	EDITOR="nano"
+	EDITOR="nano -f $APPDIR/nanorc.d/ibdfw.conf"
 
 	LOGFILE="/var/log/ibdfw.log"
 
