@@ -60,6 +60,11 @@ function Nat {
 			interface="$4"
 			network="$2"
 			fw-addRule $PRIO_NAT -t nat -I POSTROUTING -s "$network" -o "$interface" -j MASQUERADE
+			
+			if [ "$5" = "except" ]
+			then
+				fw-addRule $PRIO_NAT -t nat -I POSTROUTING -j ACCEPT -s "$network" -d "$6"
+			fi
 			;;
 
 		*)
